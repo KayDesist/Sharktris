@@ -1,0 +1,694 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🦈 Shark Tetris</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+    <style>
+        :root {
+            --ocean-deep: #020c1b;
+            --ocean-mid: #0a1f3c;
+            --ocean-light: #0d3b6e;
+            --foam: #b8e4f7;
+            --shark-grey: #5a7a8a;
+            --shark-light: #8fb4c2;
+            --coral: #ff6b5b;
+            --biolume: #00ffe7;
+            --gold: #ffd166;
+            --text: #d6f0ff;
+            --grid-line: rgba(0,200,255,0.07);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--ocean-deep);
+            color: var(--text);
+            font-family: 'Space Mono', monospace;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+            /* ── Animated ocean background ── */
+            body::before {
+                content: '';
+                position: fixed;
+                inset: 0;
+                background: radial-gradient(ellipse at 20% 80%, rgba(0,100,160,0.25) 0%, transparent 55%), radial-gradient(ellipse at 80% 20%, rgba(0,50,120,0.3) 0%, transparent 55%), linear-gradient(180deg, #020c1b 0%, #041a35 50%, #020c1b 100%);
+                z-index: -2;
+            }
+
+        /* Bubble particles */
+        .bubbles {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(0,220,255,0.12);
+            border: 1px solid rgba(0,220,255,0.2);
+            animation: rise linear infinite;
+        }
+
+        @keyframes rise {
+            0% {
+                transform: translateY(110vh) scale(1);
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 1;
+            }
+
+            90% {
+                opacity: 0.6;
+            }
+
+            100% {
+                transform: translateY(-10vh) scale(1.3);
+                opacity: 0;
+            }
+        }
+
+        /* ── Header ── */
+        header {
+            text-align: center;
+            padding: 28px 20px 10px;
+            position: relative;
+        }
+
+            header h1 {
+                font-family: 'Bebas Neue', sans-serif;
+                font-size: clamp(2.8rem, 7vw, 5rem);
+                letter-spacing: 0.12em;
+                color: var(--foam);
+                text-shadow: 0 0 30px rgba(0,220,255,0.5), 0 0 60px rgba(0,100,200,0.3);
+                line-height: 1;
+            }
+
+            header .subtitle {
+                font-size: 0.7rem;
+                letter-spacing: 0.3em;
+                color: var(--shark-light);
+                margin-top: 4px;
+                text-transform: uppercase;
+            }
+
+        .shark-icon {
+            font-size: 2.4rem;
+            display: inline-block;
+            animation: swim 3s ease-in-out infinite;
+        }
+
+        @keyframes swim {
+            0%,100% {
+                transform: translateX(0) rotate(-3deg);
+            }
+
+            50% {
+                transform: translateX(8px) rotate(3deg);
+            }
+        }
+
+        /* ── Layout ── */
+        main {
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+            padding: 16px 20px 40px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        /* ── Sidebar panels ── */
+        .panel {
+            background: linear-gradient(135deg, rgba(10,31,60,0.9), rgba(2,12,27,0.95));
+            border: 1px solid rgba(0,200,255,0.2);
+            border-radius: 12px;
+            padding: 18px 16px;
+            min-width: 130px;
+            box-shadow: 0 0 20px rgba(0,100,200,0.15), inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+
+            .panel h2 {
+                font-family: 'Bebas Neue', sans-serif;
+                font-size: 1rem;
+                letter-spacing: 0.2em;
+                color: var(--biolume);
+                margin-bottom: 10px;
+                text-transform: uppercase;
+            }
+
+        .score-val {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2rem;
+            color: var(--gold);
+            text-shadow: 0 0 12px rgba(255,200,0,0.4);
+            line-height: 1;
+        }
+
+        .level-val {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2rem;
+            color: var(--coral);
+            text-shadow: 0 0 12px rgba(255,100,80,0.4);
+            line-height: 1;
+        }
+
+        .lines-val {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.6rem;
+            color: var(--foam);
+            line-height: 1;
+        }
+
+        /* Next piece preview */
+        #next-canvas {
+            display: block;
+            margin-top: 6px;
+            border-radius: 6px;
+            border: 1px solid rgba(0,200,255,0.15);
+        }
+
+        /* Controls list */
+        .controls-list {
+            list-style: none;
+            font-size: 0.65rem;
+            line-height: 2;
+            color: var(--shark-light);
+        }
+
+            .controls-list kbd {
+                background: rgba(0,200,255,0.12);
+                border: 1px solid rgba(0,200,255,0.3);
+                border-radius: 3px;
+                padding: 1px 5px;
+                font-family: 'Space Mono', monospace;
+                font-size: 0.6rem;
+                color: var(--biolume);
+            }
+
+        /* ── Game canvas ── */
+        #game-wrap {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        #game-canvas {
+            display: block;
+            border: 2px solid rgba(0,200,255,0.3);
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0,150,255,0.2), 0 0 60px rgba(0,80,200,0.1), inset 0 0 40px rgba(0,30,80,0.5);
+        }
+
+        /* Overlay (start / pause / game over) */
+        #overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(2,12,27,0.88);
+            border-radius: 8px;
+            backdrop-filter: blur(4px);
+            gap: 16px;
+        }
+
+            #overlay h2 {
+                font-family: 'Bebas Neue', sans-serif;
+                font-size: 2.4rem;
+                letter-spacing: 0.15em;
+                color: var(--foam);
+                text-shadow: 0 0 20px var(--biolume);
+                text-align: center;
+                line-height: 1.1;
+            }
+
+            #overlay p {
+                font-size: 0.72rem;
+                letter-spacing: 0.15em;
+                color: var(--shark-light);
+                text-align: center;
+                padding: 0 20px;
+            }
+
+        .btn {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.1rem;
+            letter-spacing: 0.2em;
+            color: var(--ocean-deep);
+            background: linear-gradient(135deg, var(--biolume), #0099cc);
+            border: none;
+            border-radius: 8px;
+            padding: 10px 32px;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            box-shadow: 0 0 16px rgba(0,220,255,0.4);
+        }
+
+            .btn:hover {
+                transform: translateY(-2px) scale(1.04);
+                box-shadow: 0 0 28px rgba(0,220,255,0.7);
+            }
+
+            .btn:active {
+                transform: scale(0.97);
+            }
+
+        /* depth line at bottom */
+        footer {
+            font-size: 0.6rem;
+            letter-spacing: 0.25em;
+            color: rgba(100,160,200,0.4);
+            padding-bottom: 20px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Bubbles -->
+    <div class="bubbles" id="bubbles"></div>
+
+    <header>
+        <h1><span class="shark-icon">🦈</span> SHARK TETRIS</h1>
+        <p class="subtitle">Survive the deep — clear the reef</p>
+    </header>
+
+    <main>
+        <!-- LEFT PANEL -->
+        <div style="display:flex;flex-direction:column;gap:14px;">
+            <div class="panel">
+                <h2>Score</h2>
+                <div class="score-val" id="score">0</div>
+            </div>
+            <div class="panel">
+                <h2>Level</h2>
+                <div class="level-val" id="level">1</div>
+            </div>
+            <div class="panel">
+                <h2>Lines</h2>
+                <div class="lines-val" id="lines">0</div>
+            </div>
+        </div>
+
+        <!-- GAME CANVAS -->
+        <div id="game-wrap">
+            <canvas id="game-canvas" width="300" height="600"></canvas>
+            <div id="overlay">
+                <h2>🦈 SHARK<br>TETRIS</h2>
+                <p>Clear lines to escape the shark.<br>How deep can you survive?</p>
+                <button class="btn" id="start-btn" onclick="startGame()">DIVE IN</button>
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL -->
+        <div style="display:flex;flex-direction:column;gap:14px;">
+            <div class="panel">
+                <h2>Next</h2>
+                <canvas id="next-canvas" width="100" height="100"></canvas>
+            </div>
+            <div class="panel">
+                <h2>Controls</h2>
+                <ul class="controls-list">
+                    <li><kbd>←</kbd><kbd>→</kbd> Move</li>
+                    <li><kbd>↑</kbd> Rotate</li>
+                    <li><kbd>↓</kbd> Soft drop</li>
+                    <li><kbd>Space</kbd> Hard drop</li>
+                    <li><kbd>P</kbd> Pause</li>
+                </ul>
+            </div>
+            <div class="panel">
+                <h2>High Score</h2>
+                <div class="score-val" id="high-score" style="font-size:1.4rem;color:var(--biolume)">0</div>
+            </div>
+        </div>
+    </main>
+
+    <footer>⚓ asp.net core · shark tetris · deep sea edition ⚓</footer>
+
+    <script>
+// ═══════════════════════════════════════════════
+//  SHARK TETRIS — Game Logic
+// ═══════════════════════════════════════════════
+
+const COLS = 10, ROWS = 20, BLOCK = 30;
+const canvas  = document.getElementById('game-canvas');
+const ctx     = canvas.getContext('2d');
+const nCanvas = document.getElementById('next-canvas');
+const nCtx    = nCanvas.getContext('2d');
+
+// Shark-ocean colour palette for pieces
+const COLORS = [
+  null,
+  '#00ffe7', // I — bioluminescent cyan
+  '#ffd166', // O — deep gold
+  '#ff6b5b', // T — coral red
+  '#4ecdc4', // S — teal
+  '#0d9e94', // Z — deep teal
+  '#b8e4f7', // J — foam blue
+  '#5a9fd4', // L — ocean blue
+];
+
+const SHAPES = [
+  [],
+  [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], // I
+  [[1,1],[1,1]],                               // O
+  [[0,1,0],[1,1,1],[0,0,0]],                   // T
+  [[0,1,1],[1,1,0],[0,0,0]],                   // S
+  [[1,1,0],[0,1,1],[0,0,0]],                   // Z
+  [[1,0,0],[1,1,1],[0,0,0]],                   // J
+  [[0,0,1],[1,1,1],[0,0,0]],                   // L
+];
+
+let board, piece, nextPiece, score, level, lines, highScore, gameLoop, paused, gameOver;
+
+// ── Board helpers ──────────────────────────────
+function emptyBoard() {
+  return Array.from({length: ROWS}, () => new Array(COLS).fill(0));
+}
+
+function validPos(p, offsetX = 0, offsetY = 0, shape = p.shape) {
+  return shape.every((row, dy) =>
+    row.every((val, dx) => {
+      if (!val) return true;
+      const nx = p.x + dx + offsetX;
+      const ny = p.y + dy + offsetY;
+      return nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS && !board[ny][nx];
+    })
+  );
+}
+
+function placePiece() {
+  piece.shape.forEach((row, dy) =>
+    row.forEach((val, dx) => {
+      if (val) board[piece.y + dy][piece.x + dx] = piece.type;
+    })
+  );
+}
+
+function clearLines() {
+  let cleared = 0;
+  for (let y = ROWS - 1; y >= 0; y--) {
+    if (board[y].every(v => v)) {
+      board.splice(y, 1);
+      board.unshift(new Array(COLS).fill(0));
+      cleared++;
+      y++;
+    }
+  }
+  if (cleared) {
+    const pts = [0, 100, 300, 500, 800];
+    score += (pts[cleared] || 800) * level;
+    lines += cleared;
+    level = Math.floor(lines / 10) + 1;
+    updateHUD();
+    if (score > highScore) {
+      highScore = score;
+      document.getElementById('high-score').textContent = highScore;
+    }
+  }
+}
+
+// ── Piece factory ──────────────────────────────
+function randomPiece() {
+  const type = Math.floor(Math.random() * 7) + 1;
+  return {
+    type,
+    shape: SHAPES[type].map(r => [...r]),
+    x: Math.floor(COLS / 2) - Math.floor(SHAPES[type][0].length / 2),
+    y: 0,
+  };
+}
+
+function rotatePiece() {
+  const rotated = piece.shape[0].map((_, i) =>
+    piece.shape.map(row => row[i]).reverse()
+  );
+  const kicks = [0, 1, -1, 2, -2];
+  for (const k of kicks) {
+    if (validPos(piece, k, 0, rotated)) {
+      piece.shape = rotated;
+      piece.x += k;
+      return;
+    }
+  }
+}
+
+// ── Ghost piece ────────────────────────────────
+function ghostY() {
+  let g = piece.y;
+  while (validPos(piece, 0, g - piece.y + 1)) g++;
+  return g;
+}
+
+// ── Draw helpers ──────────────────────────────
+function drawBlock(c, x, y, color, alpha = 1) {
+  c.globalAlpha = alpha;
+  // Main fill — glossy ocean tile
+  const grad = c.createLinearGradient(x*BLOCK, y*BLOCK, x*BLOCK+BLOCK, y*BLOCK+BLOCK);
+  grad.addColorStop(0, lighten(color, 30));
+  grad.addColorStop(1, color);
+  c.fillStyle = grad;
+  c.fillRect(x*BLOCK+1, y*BLOCK+1, BLOCK-2, BLOCK-2);
+  // Highlight
+  c.fillStyle = 'rgba(255,255,255,0.18)';
+  c.fillRect(x*BLOCK+2, y*BLOCK+2, BLOCK-4, 4);
+  // Border glow
+  c.strokeStyle = lighten(color, 50);
+  c.lineWidth = 0.8;
+  c.strokeRect(x*BLOCK+1, y*BLOCK+1, BLOCK-2, BLOCK-2);
+  c.globalAlpha = 1;
+}
+
+function lighten(hex, amt) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.min(255, (n >> 16) + amt);
+  const g = Math.min(255, ((n >> 8) & 0xff) + amt);
+  const b = Math.min(255, (n & 0xff) + amt);
+  return `rgb(${r},${g},${b})`;
+}
+
+function drawBoard() {
+  // Ocean background for the board
+  const bg = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  bg.addColorStop(0, '#041a35');
+  bg.addColorStop(1, '#020c1b');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(0,180,255,0.06)';
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x <= COLS; x++) { ctx.beginPath(); ctx.moveTo(x*BLOCK,0); ctx.lineTo(x*BLOCK,canvas.height); ctx.stroke(); }
+  for (let y = 0; y <= ROWS; y++) { ctx.beginPath(); ctx.moveTo(0,y*BLOCK); ctx.lineTo(canvas.width,y*BLOCK); ctx.stroke(); }
+
+  // Placed pieces
+  board.forEach((row, y) =>
+    row.forEach((val, x) => {
+      if (val) drawBlock(ctx, x, y, COLORS[val]);
+    })
+  );
+
+  // Ghost piece
+  const gy = ghostY();
+  if (gy !== piece.y) {
+    piece.shape.forEach((row, dy) =>
+      row.forEach((val, dx) => {
+        if (val) drawBlock(ctx, piece.x+dx, gy+dy, COLORS[piece.type], 0.18);
+      })
+    );
+  }
+
+  // Active piece
+  piece.shape.forEach((row, dy) =>
+    row.forEach((val, dx) => {
+      if (val) drawBlock(ctx, piece.x+dx, piece.y+dy, COLORS[piece.type]);
+    })
+  );
+}
+
+function drawNext() {
+  nCtx.clearRect(0, 0, 100, 100);
+  nCtx.fillStyle = 'rgba(4,26,53,0.8)';
+  nCtx.fillRect(0, 0, 100, 100);
+  const s = nextPiece.shape;
+  const offX = Math.floor((4 - s[0].length) / 2);
+  const offY = Math.floor((4 - s.length) / 2);
+  const nb = 22;
+  s.forEach((row, dy) =>
+    row.forEach((val, dx) => {
+      if (!val) return;
+      const x = (offX + dx) * nb + 4;
+      const y = (offY + dy) * nb + 4;
+      nCtx.fillStyle = COLORS[nextPiece.type];
+      nCtx.fillRect(x+1, y+1, nb-2, nb-2);
+      nCtx.fillStyle = 'rgba(255,255,255,0.15)';
+      nCtx.fillRect(x+2, y+2, nb-4, 3);
+    })
+  );
+}
+
+function updateHUD() {
+  document.getElementById('score').textContent = score.toLocaleString();
+  document.getElementById('level').textContent = level;
+  document.getElementById('lines').textContent = lines;
+}
+
+// ── Game tick ─────────────────────────────────
+function tick() {
+  if (paused || gameOver) return;
+  if (validPos(piece, 0, 1)) {
+    piece.y++;
+  } else {
+    placePiece();
+    clearLines();
+    piece = nextPiece;
+    nextPiece = randomPiece();
+    drawNext();
+    if (!validPos(piece, 0, 0)) {
+      endGame();
+      return;
+    }
+  }
+  drawBoard();
+}
+
+function dropInterval() {
+  return Math.max(80, 800 - (level - 1) * 70);
+}
+
+function startLoop() {
+  clearInterval(gameLoop);
+  gameLoop = setInterval(tick, dropInterval());
+}
+
+// ── Game lifecycle ─────────────────────────────
+function startGame() {
+  board      = emptyBoard();
+  score      = 0;
+  level      = 1;
+  lines      = 0;
+  paused     = false;
+  gameOver   = false;
+  highScore  = highScore || 0;
+  piece      = randomPiece();
+  nextPiece  = randomPiece();
+  updateHUD();
+  drawNext();
+  document.getElementById('overlay').style.display = 'none';
+  startLoop();
+  drawBoard();
+}
+
+function endGame() {
+  gameOver = true;
+  clearInterval(gameLoop);
+  if (score > highScore) highScore = score;
+  document.getElementById('high-score').textContent = highScore;
+  const ov = document.getElementById('overlay');
+  ov.innerHTML = `
+    <h2>GAME OVER<br>🦈</h2>
+    <p>The shark got you!<br>Final score: <strong style="color:var(--gold)">${score.toLocaleString()}</strong></p>
+    <button class="btn" onclick="startGame()">TRY AGAIN</button>
+  `;
+  ov.style.display = 'flex';
+}
+
+function togglePause() {
+  if (gameOver) return;
+  paused = !paused;
+  if (paused) {
+    clearInterval(gameLoop);
+    const ov = document.getElementById('overlay');
+    ov.innerHTML = `
+      <h2>PAUSED<br>🌊</h2>
+      <p>The ocean waits...</p>
+      <button class="btn" onclick="togglePause()">RESUME</button>
+    `;
+    ov.style.display = 'flex';
+  } else {
+    document.getElementById('overlay').style.display = 'none';
+    startLoop();
+  }
+}
+
+// ── Input ──────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (!piece || gameOver) return;
+  switch(e.code) {
+    case 'ArrowLeft':  if(validPos(piece,-1,0)) piece.x--; break;
+    case 'ArrowRight': if(validPos(piece,1,0))  piece.x++; break;
+    case 'ArrowDown':
+      if(validPos(piece,0,1)) { piece.y++; score++; updateHUD(); }
+      break;
+    case 'ArrowUp':    rotatePiece(); break;
+    case 'Space':
+      e.preventDefault();
+      while(validPos(piece,0,1)) { piece.y++; score += 2; }
+      updateHUD();
+      tick();
+      return;
+    case 'KeyP': togglePause(); return;
+  }
+  if (!paused) drawBoard();
+});
+
+// Touch / swipe support
+let tx = null, ty = null;
+canvas.addEventListener('touchstart', e => {
+  tx = e.touches[0].clientX;
+  ty = e.touches[0].clientY;
+}, {passive: true});
+canvas.addEventListener('touchend', e => {
+  if (tx === null) return;
+  const dx = e.changedTouches[0].clientX - tx;
+  const dy = e.changedTouches[0].clientY - ty;
+  if (Math.abs(dx) > Math.abs(dy)) {
+    if (dx > 20 && validPos(piece,1,0)) piece.x++;
+    if (dx < -20 && validPos(piece,-1,0)) piece.x--;
+  } else {
+    if (dy > 20 && validPos(piece,0,1)) piece.y++;
+    if (dy < -20) rotatePiece();
+  }
+  tx = ty = null;
+  if (!paused && !gameOver) drawBoard();
+}, {passive: true});
+
+// ── Load high score from API title call ────────
+fetch('/api/title').then(r=>r.json()).then(d=>{
+  document.title = d.title;
+}).catch(()=>{});
+
+// ── Spawn bubbles ──────────────────────────────
+(function spawnBubbles() {
+  const container = document.getElementById('bubbles');
+  for (let i = 0; i < 18; i++) {
+    const b = document.createElement('div');
+    b.className = 'bubble';
+    const size = 4 + Math.random() * 14;
+    b.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:${Math.random()*100}%;
+      animation-duration:${8+Math.random()*14}s;
+      animation-delay:${-Math.random()*20}s;
+    `;
+    container.appendChild(b);
+  }
+})();
+    </script>
+</body>
+</html>
