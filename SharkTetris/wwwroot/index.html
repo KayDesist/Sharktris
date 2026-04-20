@@ -341,354 +341,408 @@
     <footer>⚓ asp.net core · shark tetris · deep sea edition ⚓</footer>
 
     <script>
-// ═══════════════════════════════════════════════
-//  SHARK TETRIS — Game Logic
-// ═══════════════════════════════════════════════
+        // ═══════════════════════════════════════════════
+        //  SHARK TETRIS — Game Logic
+        // ═══════════════════════════════════════════════
 
-const COLS = 10, ROWS = 20, BLOCK = 30;
-const canvas  = document.getElementById('game-canvas');
-const ctx     = canvas.getContext('2d');
-const nCanvas = document.getElementById('next-canvas');
-const nCtx    = nCanvas.getContext('2d');
+        const COLS = 10, ROWS = 20, BLOCK = 30;
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const nCanvas = document.getElementById('next-canvas');
+        const nCtx = nCanvas.getContext('2d');
 
-// Shark-ocean colour palette for pieces
-const COLORS = [
-  null,
-  '#00ffe7', // I — bioluminescent cyan
-  '#ffd166', // O — deep gold
-  '#ff6b5b', // T — coral red
-  '#4ecdc4', // S — teal
-  '#0d9e94', // Z — deep teal
-  '#b8e4f7', // J — foam blue
-  '#5a9fd4', // L — ocean blue
-];
+        // Shark-ocean colour palette for pieces
+        const COLORS = [
+            null,
+            '#00ffe7', // I — bioluminescent cyan
+            '#ffd166', // O — deep gold
+            '#ff6b5b', // T — coral red
+            '#4ecdc4', // S — teal
+            '#0d9e94', // Z — deep teal
+            '#b8e4f7', // J — foam blue
+            '#5a9fd4', // L — ocean blue
+        ];
 
-const SHAPES = [
-  [],
-  [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], // I
-  [[1,1],[1,1]],                               // O
-  [[0,1,0],[1,1,1],[0,0,0]],                   // T
-  [[0,1,1],[1,1,0],[0,0,0]],                   // S
-  [[1,1,0],[0,1,1],[0,0,0]],                   // Z
-  [[1,0,0],[1,1,1],[0,0,0]],                   // J
-  [[0,0,1],[1,1,1],[0,0,0]],                   // L
-];
+        const SHAPES = [
+            [],
+            [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]], // I
+            [[1, 1], [1, 1]],                               // O
+            [[0, 1, 0], [1, 1, 1], [0, 0, 0]],                   // T
+            [[0, 1, 1], [1, 1, 0], [0, 0, 0]],                   // S
+            [[1, 1, 0], [0, 1, 1], [0, 0, 0]],                   // Z
+            [[1, 0, 0], [1, 1, 1], [0, 0, 0]],                   // J
+            [[0, 0, 1], [1, 1, 1], [0, 0, 0]],                   // L
+        ];
 
-let board, piece, nextPiece, score, level, lines, highScore, gameLoop, paused, gameOver;
+        let board, piece, nextPiece, score, level, lines, highScore, gameLoop, paused, gameOver;
 
-// ── Board helpers ──────────────────────────────
-function emptyBoard() {
-  return Array.from({length: ROWS}, () => new Array(COLS).fill(0));
-}
+        // ── Board helpers ──────────────────────────────
+        function emptyBoard() {
+            return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
+        }
 
-function validPos(p, offsetX = 0, offsetY = 0, shape = p.shape) {
-  return shape.every((row, dy) =>
-    row.every((val, dx) => {
-      if (!val) return true;
-      const nx = p.x + dx + offsetX;
-      const ny = p.y + dy + offsetY;
-      return nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS && !board[ny][nx];
-    })
-  );
-}
+        function validPos(p, offsetX = 0, offsetY = 0, shape = p.shape) {
+            return shape.every((row, dy) =>
+                row.every((val, dx) => {
+                    if (!val) return true;
+                    const nx = p.x + dx + offsetX;
+                    const ny = p.y + dy + offsetY;
+                    return nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS && !board[ny][nx];
+                })
+            );
+        }
 
-function placePiece() {
-  piece.shape.forEach((row, dy) =>
-    row.forEach((val, dx) => {
-      if (val) board[piece.y + dy][piece.x + dx] = piece.type;
-    })
-  );
-}
+        function placePiece() {
+            piece.shape.forEach((row, dy) =>
+                row.forEach((val, dx) => {
+                    if (val) board[piece.y + dy][piece.x + dx] = piece.type;
+                })
+            );
+        }
 
-function clearLines() {
-  let cleared = 0;
-  for (let y = ROWS - 1; y >= 0; y--) {
-    if (board[y].every(v => v)) {
-      board.splice(y, 1);
-      board.unshift(new Array(COLS).fill(0));
-      cleared++;
-      y++;
-    }
-  }
-  if (cleared) {
-    const pts = [0, 100, 300, 500, 800];
-    score += (pts[cleared] || 800) * level;
-    lines += cleared;
-    level = Math.floor(lines / 10) + 1;
-    updateHUD();
-    if (score > highScore) {
-      highScore = score;
-      document.getElementById('high-score').textContent = highScore;
-    }
-  }
-}
+        function clearLines() {
+            let cleared = 0;
+            for (let y = ROWS - 1; y >= 0; y--) {
+                if (board[y].every(v => v)) {
+                    board.splice(y, 1);
+                    board.unshift(new Array(COLS).fill(0));
+                    cleared++;
+                    y++;
+                }
+            }
+            if (cleared) {
+                const pts = [0, 100, 300, 500, 800];
+                score += (pts[cleared] || 800) * level;
+                lines += cleared;
+                level = Math.floor(lines / 10) + 1;
+                updateHUD();
+                if (score > highScore) {
+                    highScore = score;
+                    document.getElementById('high-score').textContent = highScore;
+                }
+            }
+        }
 
-// ── Piece factory ──────────────────────────────
-function randomPiece() {
-  const type = Math.floor(Math.random() * 7) + 1;
-  return {
-    type,
-    shape: SHAPES[type].map(r => [...r]),
-    x: Math.floor(COLS / 2) - Math.floor(SHAPES[type][0].length / 2),
-    y: 0,
-  };
-}
+        // ── Piece Factory (API-backed) ─────────────────
+        //
+        // Design Pattern: Factory
+        // ─────────────────────────────────────────────
+        // Piece creation is now delegated to the server-side TetrisPieceFactory via
+        // a REST endpoint. The client maintains a small pre-fetch buffer so the game
+        // loop stays fully synchronous — pieces are ready before they're needed.
+        //
+        // If the API is unreachable (e.g. offline), clientFallbackPiece() ensures
+        // the game keeps running without interruption.
 
-function rotatePiece() {
-  const rotated = piece.shape[0].map((_, i) =>
-    piece.shape.map(row => row[i]).reverse()
-  );
-  const kicks = [0, 1, -1, 2, -2];
-  for (const k of kicks) {
-    if (validPos(piece, k, 0, rotated)) {
-      piece.shape = rotated;
-      piece.x += k;
-      return;
-    }
-  }
-}
+        const PIECE_BUFFER_SIZE = 4;
+        const pieceBuffer = [];
 
-// ── Ghost piece ────────────────────────────────
-function ghostY() {
-  let g = piece.y;
-  while (validPos(piece, 0, g - piece.y + 1)) g++;
-  return g;
-}
+        /** Client-side fallback — used only when the API is unavailable. */
+        function clientFallbackPiece() {
+            const type = Math.floor(Math.random() * 7) + 1;
+            return { type, shape: SHAPES[type].map(r => [...r]), x: Math.floor(COLS / 2) - Math.floor(SHAPES[type][0].length / 2), y: 0 };
+        }
 
-// ── Draw helpers ──────────────────────────────
-function drawBlock(c, x, y, color, alpha = 1) {
-  c.globalAlpha = alpha;
-  // Main fill — glossy ocean tile
-  const grad = c.createLinearGradient(x*BLOCK, y*BLOCK, x*BLOCK+BLOCK, y*BLOCK+BLOCK);
-  grad.addColorStop(0, lighten(color, 30));
-  grad.addColorStop(1, color);
-  c.fillStyle = grad;
-  c.fillRect(x*BLOCK+1, y*BLOCK+1, BLOCK-2, BLOCK-2);
-  // Highlight
-  c.fillStyle = 'rgba(255,255,255,0.18)';
-  c.fillRect(x*BLOCK+2, y*BLOCK+2, BLOCK-4, 4);
-  // Border glow
-  c.strokeStyle = lighten(color, 50);
-  c.lineWidth = 0.8;
-  c.strokeRect(x*BLOCK+1, y*BLOCK+1, BLOCK-2, BLOCK-2);
-  c.globalAlpha = 1;
-}
+        /** Fetch a single piece from the server factory and push it into the buffer. */
+        function fetchIntoBuffer() {
+            fetch('/api/piece')
+                .then(r => r.json())
+                .then(d => pieceBuffer.push({ type: d.type, shape: d.shape, x: d.startX, y: 0 }))
+                .catch(() => pieceBuffer.push(clientFallbackPiece()));
+        }
 
-function lighten(hex, amt) {
-  const n = parseInt(hex.slice(1), 16);
-  const r = Math.min(255, (n >> 16) + amt);
-  const g = Math.min(255, ((n >> 8) & 0xff) + amt);
-  const b = Math.min(255, (n & 0xff) + amt);
-  return `rgb(${r},${g},${b})`;
-}
+        /** Keep the buffer topped up to PIECE_BUFFER_SIZE in the background. */
+        function fillBuffer() {
+            const needed = PIECE_BUFFER_SIZE - pieceBuffer.length;
+            for (let i = 0; i < needed; i++) fetchIntoBuffer();
+        }
 
-function drawBoard() {
-  // Ocean background for the board
-  const bg = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  bg.addColorStop(0, '#041a35');
-  bg.addColorStop(1, '#020c1b');
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+        /**
+         * Synchronously dequeue the next ready piece.
+         * Falls back to client-side generation if the buffer is somehow empty
+         * (extremely unlikely given pre-fetching, but guards against edge cases).
+         */
+        function getPiece() {
+            fillBuffer(); // trigger a background top-up
+            return pieceBuffer.length > 0 ? pieceBuffer.shift() : clientFallbackPiece();
+        }
 
-  // Grid lines
-  ctx.strokeStyle = 'rgba(0,180,255,0.06)';
-  ctx.lineWidth = 0.5;
-  for (let x = 0; x <= COLS; x++) { ctx.beginPath(); ctx.moveTo(x*BLOCK,0); ctx.lineTo(x*BLOCK,canvas.height); ctx.stroke(); }
-  for (let y = 0; y <= ROWS; y++) { ctx.beginPath(); ctx.moveTo(0,y*BLOCK); ctx.lineTo(canvas.width,y*BLOCK); ctx.stroke(); }
+        /**
+         * Fetch PIECE_BUFFER_SIZE pieces in parallel and wait for them all.
+         * Called once at game start to ensure pieces are ready before play begins.
+         */
+        async function primeBuffer() {
+            pieceBuffer.length = 0;
+            await Promise.all(
+                Array.from({ length: PIECE_BUFFER_SIZE }, () =>
+                    fetch('/api/piece')
+                        .then(r => r.json())
+                        .then(d => pieceBuffer.push({ type: d.type, shape: d.shape, x: d.startX, y: 0 }))
+                        .catch(() => pieceBuffer.push(clientFallbackPiece()))
+                )
+            );
+        }
 
-  // Placed pieces
-  board.forEach((row, y) =>
-    row.forEach((val, x) => {
-      if (val) drawBlock(ctx, x, y, COLORS[val]);
-    })
-  );
+        function rotatePiece() {
+            const rotated = piece.shape[0].map((_, i) =>
+                piece.shape.map(row => row[i]).reverse()
+            );
+            const kicks = [0, 1, -1, 2, -2];
+            for (const k of kicks) {
+                if (validPos(piece, k, 0, rotated)) {
+                    piece.shape = rotated;
+                    piece.x += k;
+                    return;
+                }
+            }
+        }
 
-  // Ghost piece
-  const gy = ghostY();
-  if (gy !== piece.y) {
-    piece.shape.forEach((row, dy) =>
-      row.forEach((val, dx) => {
-        if (val) drawBlock(ctx, piece.x+dx, gy+dy, COLORS[piece.type], 0.18);
-      })
-    );
-  }
+        // ── Ghost piece ────────────────────────────────
+        function ghostY() {
+            let g = piece.y;
+            while (validPos(piece, 0, g - piece.y + 1)) g++;
+            return g;
+        }
 
-  // Active piece
-  piece.shape.forEach((row, dy) =>
-    row.forEach((val, dx) => {
-      if (val) drawBlock(ctx, piece.x+dx, piece.y+dy, COLORS[piece.type]);
-    })
-  );
-}
+        // ── Draw helpers ──────────────────────────────
+        function drawBlock(c, x, y, color, alpha = 1) {
+            c.globalAlpha = alpha;
+            // Main fill — glossy ocean tile
+            const grad = c.createLinearGradient(x * BLOCK, y * BLOCK, x * BLOCK + BLOCK, y * BLOCK + BLOCK);
+            grad.addColorStop(0, lighten(color, 30));
+            grad.addColorStop(1, color);
+            c.fillStyle = grad;
+            c.fillRect(x * BLOCK + 1, y * BLOCK + 1, BLOCK - 2, BLOCK - 2);
+            // Highlight
+            c.fillStyle = 'rgba(255,255,255,0.18)';
+            c.fillRect(x * BLOCK + 2, y * BLOCK + 2, BLOCK - 4, 4);
+            // Border glow
+            c.strokeStyle = lighten(color, 50);
+            c.lineWidth = 0.8;
+            c.strokeRect(x * BLOCK + 1, y * BLOCK + 1, BLOCK - 2, BLOCK - 2);
+            c.globalAlpha = 1;
+        }
 
-function drawNext() {
-  nCtx.clearRect(0, 0, 100, 100);
-  nCtx.fillStyle = 'rgba(4,26,53,0.8)';
-  nCtx.fillRect(0, 0, 100, 100);
-  const s = nextPiece.shape;
-  const offX = Math.floor((4 - s[0].length) / 2);
-  const offY = Math.floor((4 - s.length) / 2);
-  const nb = 22;
-  s.forEach((row, dy) =>
-    row.forEach((val, dx) => {
-      if (!val) return;
-      const x = (offX + dx) * nb + 4;
-      const y = (offY + dy) * nb + 4;
-      nCtx.fillStyle = COLORS[nextPiece.type];
-      nCtx.fillRect(x+1, y+1, nb-2, nb-2);
-      nCtx.fillStyle = 'rgba(255,255,255,0.15)';
-      nCtx.fillRect(x+2, y+2, nb-4, 3);
-    })
-  );
-}
+        function lighten(hex, amt) {
+            const n = parseInt(hex.slice(1), 16);
+            const r = Math.min(255, (n >> 16) + amt);
+            const g = Math.min(255, ((n >> 8) & 0xff) + amt);
+            const b = Math.min(255, (n & 0xff) + amt);
+            return `rgb(${r},${g},${b})`;
+        }
 
-function updateHUD() {
-  document.getElementById('score').textContent = score.toLocaleString();
-  document.getElementById('level').textContent = level;
-  document.getElementById('lines').textContent = lines;
-}
+        function drawBoard() {
+            // Ocean background for the board
+            const bg = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            bg.addColorStop(0, '#041a35');
+            bg.addColorStop(1, '#020c1b');
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-// ── Game tick ─────────────────────────────────
-function tick() {
-  if (paused || gameOver) return;
-  if (validPos(piece, 0, 1)) {
-    piece.y++;
-  } else {
-    placePiece();
-    clearLines();
-    piece = nextPiece;
-    nextPiece = randomPiece();
-    drawNext();
-    if (!validPos(piece, 0, 0)) {
-      endGame();
-      return;
-    }
-  }
-  drawBoard();
-}
+            // Grid lines
+            ctx.strokeStyle = 'rgba(0,180,255,0.06)';
+            ctx.lineWidth = 0.5;
+            for (let x = 0; x <= COLS; x++) { ctx.beginPath(); ctx.moveTo(x * BLOCK, 0); ctx.lineTo(x * BLOCK, canvas.height); ctx.stroke(); }
+            for (let y = 0; y <= ROWS; y++) { ctx.beginPath(); ctx.moveTo(0, y * BLOCK); ctx.lineTo(canvas.width, y * BLOCK); ctx.stroke(); }
 
-function dropInterval() {
-  return Math.max(80, 800 - (level - 1) * 70);
-}
+            // Placed pieces
+            board.forEach((row, y) =>
+                row.forEach((val, x) => {
+                    if (val) drawBlock(ctx, x, y, COLORS[val]);
+                })
+            );
 
-function startLoop() {
-  clearInterval(gameLoop);
-  gameLoop = setInterval(tick, dropInterval());
-}
+            // Ghost piece
+            const gy = ghostY();
+            if (gy !== piece.y) {
+                piece.shape.forEach((row, dy) =>
+                    row.forEach((val, dx) => {
+                        if (val) drawBlock(ctx, piece.x + dx, gy + dy, COLORS[piece.type], 0.18);
+                    })
+                );
+            }
 
-// ── Game lifecycle ─────────────────────────────
-function startGame() {
-  board      = emptyBoard();
-  score      = 0;
-  level      = 1;
-  lines      = 0;
-  paused     = false;
-  gameOver   = false;
-  highScore  = highScore || 0;
-  piece      = randomPiece();
-  nextPiece  = randomPiece();
-  updateHUD();
-  drawNext();
-  document.getElementById('overlay').style.display = 'none';
-  startLoop();
-  drawBoard();
-}
+            // Active piece
+            piece.shape.forEach((row, dy) =>
+                row.forEach((val, dx) => {
+                    if (val) drawBlock(ctx, piece.x + dx, piece.y + dy, COLORS[piece.type]);
+                })
+            );
+        }
 
-function endGame() {
-  gameOver = true;
-  clearInterval(gameLoop);
-  if (score > highScore) highScore = score;
-  document.getElementById('high-score').textContent = highScore;
-  const ov = document.getElementById('overlay');
-  ov.innerHTML = `
-    <h2>GAME OVER<br>🦈</h2>
-    <p>The shark got you!<br>Final score: <strong style="color:var(--gold)">${score.toLocaleString()}</strong></p>
-    <button class="btn" onclick="startGame()">TRY AGAIN</button>
-  `;
-  ov.style.display = 'flex';
-}
+        function drawNext() {
+            nCtx.clearRect(0, 0, 100, 100);
+            nCtx.fillStyle = 'rgba(4,26,53,0.8)';
+            nCtx.fillRect(0, 0, 100, 100);
+            const s = nextPiece.shape;
+            const offX = Math.floor((4 - s[0].length) / 2);
+            const offY = Math.floor((4 - s.length) / 2);
+            const nb = 22;
+            s.forEach((row, dy) =>
+                row.forEach((val, dx) => {
+                    if (!val) return;
+                    const x = (offX + dx) * nb + 4;
+                    const y = (offY + dy) * nb + 4;
+                    nCtx.fillStyle = COLORS[nextPiece.type];
+                    nCtx.fillRect(x + 1, y + 1, nb - 2, nb - 2);
+                    nCtx.fillStyle = 'rgba(255,255,255,0.15)';
+                    nCtx.fillRect(x + 2, y + 2, nb - 4, 3);
+                })
+            );
+        }
 
-function togglePause() {
-  if (gameOver) return;
-  paused = !paused;
-  if (paused) {
-    clearInterval(gameLoop);
-    const ov = document.getElementById('overlay');
-    ov.innerHTML = `
-      <h2>PAUSED<br>🌊</h2>
-      <p>The ocean waits...</p>
-      <button class="btn" onclick="togglePause()">RESUME</button>
-    `;
-    ov.style.display = 'flex';
-  } else {
-    document.getElementById('overlay').style.display = 'none';
-    startLoop();
-  }
-}
+        function updateHUD() {
+            document.getElementById('score').textContent = score.toLocaleString();
+            document.getElementById('level').textContent = level;
+            document.getElementById('lines').textContent = lines;
+        }
 
-// ── Input ──────────────────────────────────────
-document.addEventListener('keydown', e => {
-  if (!piece || gameOver) return;
-  switch(e.code) {
-    case 'ArrowLeft':  if(validPos(piece,-1,0)) piece.x--; break;
-    case 'ArrowRight': if(validPos(piece,1,0))  piece.x++; break;
-    case 'ArrowDown':
-      if(validPos(piece,0,1)) { piece.y++; score++; updateHUD(); }
-      break;
-    case 'ArrowUp':    rotatePiece(); break;
-    case 'Space':
-      e.preventDefault();
-      while(validPos(piece,0,1)) { piece.y++; score += 2; }
-      updateHUD();
-      tick();
-      return;
-    case 'KeyP': togglePause(); return;
-  }
-  if (!paused) drawBoard();
-});
+        // ── Game tick ─────────────────────────────────
+        function tick() {
+            if (paused || gameOver) return;
+            if (validPos(piece, 0, 1)) {
+                piece.y++;
+            } else {
+                placePiece();
+                clearLines();
+                piece = nextPiece;
+                nextPiece = getPiece();
+                drawNext();
+                if (!validPos(piece, 0, 0)) {
+                    endGame();
+                    return;
+                }
+            }
+            drawBoard();
+        }
 
-// Touch / swipe support
-let tx = null, ty = null;
-canvas.addEventListener('touchstart', e => {
-  tx = e.touches[0].clientX;
-  ty = e.touches[0].clientY;
-}, {passive: true});
-canvas.addEventListener('touchend', e => {
-  if (tx === null) return;
-  const dx = e.changedTouches[0].clientX - tx;
-  const dy = e.changedTouches[0].clientY - ty;
-  if (Math.abs(dx) > Math.abs(dy)) {
-    if (dx > 20 && validPos(piece,1,0)) piece.x++;
-    if (dx < -20 && validPos(piece,-1,0)) piece.x--;
-  } else {
-    if (dy > 20 && validPos(piece,0,1)) piece.y++;
-    if (dy < -20) rotatePiece();
-  }
-  tx = ty = null;
-  if (!paused && !gameOver) drawBoard();
-}, {passive: true});
+        function dropInterval() {
+            return Math.max(80, 800 - (level - 1) * 70);
+        }
 
-// ── Load high score from API title call ────────
-fetch('/api/title').then(r=>r.json()).then(d=>{
-  document.title = d.title;
-}).catch(()=>{});
+        function startLoop() {
+            clearInterval(gameLoop);
+            gameLoop = setInterval(tick, dropInterval());
+        }
 
-// ── Spawn bubbles ──────────────────────────────
-(function spawnBubbles() {
-  const container = document.getElementById('bubbles');
-  for (let i = 0; i < 18; i++) {
-    const b = document.createElement('div');
-    b.className = 'bubble';
-    const size = 4 + Math.random() * 14;
-    b.style.cssText = `
-      width:${size}px; height:${size}px;
-      left:${Math.random()*100}%;
-      animation-duration:${8+Math.random()*14}s;
-      animation-delay:${-Math.random()*20}s;
-    `;
-    container.appendChild(b);
-  }
-})();
+        // ── Game lifecycle ─────────────────────────────
+        async function startGame() {
+            board = emptyBoard();
+            score = 0;
+            level = 1;
+            lines = 0;
+            paused = false;
+            gameOver = false;
+            highScore = highScore || 0;
+
+            // Pre-fetch a full buffer from the server factory before starting.
+            // This guarantees getPiece() never blocks during play.
+            await primeBuffer();
+
+            piece = getPiece();
+            nextPiece = getPiece();
+            updateHUD();
+            drawNext();
+            document.getElementById('overlay').style.display = 'none';
+            startLoop();
+            drawBoard();
+        }
+
+        function endGame() {
+            gameOver = true;
+            clearInterval(gameLoop);
+            if (score > highScore) highScore = score;
+            document.getElementById('high-score').textContent = highScore;
+            const ov = document.getElementById('overlay');
+            ov.innerHTML = `
+        <h2>GAME OVER<br>🦈</h2>
+        <p>The shark got you!<br>Final score: <strong style="color:var(--gold)">${score.toLocaleString()}</strong></p>
+        <button class="btn" onclick="startGame()">TRY AGAIN</button>
+      `;
+            ov.style.display = 'flex';
+        }
+
+        function togglePause() {
+            if (gameOver) return;
+            paused = !paused;
+            if (paused) {
+                clearInterval(gameLoop);
+                const ov = document.getElementById('overlay');
+                ov.innerHTML = `
+          <h2>PAUSED<br>🌊</h2>
+          <p>The ocean waits...</p>
+          <button class="btn" onclick="togglePause()">RESUME</button>
+        `;
+                ov.style.display = 'flex';
+            } else {
+                document.getElementById('overlay').style.display = 'none';
+                startLoop();
+            }
+        }
+
+        // ── Input ──────────────────────────────────────
+        document.addEventListener('keydown', e => {
+            if (!piece || gameOver) return;
+            switch (e.code) {
+                case 'ArrowLeft': if (validPos(piece, -1, 0)) piece.x--; break;
+                case 'ArrowRight': if (validPos(piece, 1, 0)) piece.x++; break;
+                case 'ArrowDown':
+                    if (validPos(piece, 0, 1)) { piece.y++; score++; updateHUD(); }
+                    break;
+                case 'ArrowUp': rotatePiece(); break;
+                case 'Space':
+                    e.preventDefault();
+                    while (validPos(piece, 0, 1)) { piece.y++; score += 2; }
+                    updateHUD();
+                    tick();
+                    return;
+                case 'KeyP': togglePause(); return;
+            }
+            if (!paused) drawBoard();
+        });
+
+        // Touch / swipe support
+        let tx = null, ty = null;
+        canvas.addEventListener('touchstart', e => {
+            tx = e.touches[0].clientX;
+            ty = e.touches[0].clientY;
+        }, { passive: true });
+        canvas.addEventListener('touchend', e => {
+            if (tx === null) return;
+            const dx = e.changedTouches[0].clientX - tx;
+            const dy = e.changedTouches[0].clientY - ty;
+            if (Math.abs(dx) > Math.abs(dy)) {
+                if (dx > 20 && validPos(piece, 1, 0)) piece.x++;
+                if (dx < -20 && validPos(piece, -1, 0)) piece.x--;
+            } else {
+                if (dy > 20 && validPos(piece, 0, 1)) piece.y++;
+                if (dy < -20) rotatePiece();
+            }
+            tx = ty = null;
+            if (!paused && !gameOver) drawBoard();
+        }, { passive: true });
+
+        // ── Load high score from API title call ────────
+        fetch('/api/title').then(r => r.json()).then(d => {
+            document.title = d.title;
+        }).catch(() => { });
+
+        // ── Spawn bubbles ──────────────────────────────
+        (function spawnBubbles() {
+            const container = document.getElementById('bubbles');
+            for (let i = 0; i < 18; i++) {
+                const b = document.createElement('div');
+                b.className = 'bubble';
+                const size = 4 + Math.random() * 14;
+                b.style.cssText = `
+          width:${size}px; height:${size}px;
+          left:${Math.random() * 100}%;
+          animation-duration:${8 + Math.random() * 14}s;
+          animation-delay:${-Math.random() * 20}s;
+        `;
+                container.appendChild(b);
+            }
+        })();
     </script>
 </body>
 </html>
