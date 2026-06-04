@@ -2,22 +2,15 @@ using SharkTetris.Models;
 
 namespace SharkTetris.Services;
 
-/// <summary>
-/// Abstract base decorator for <see cref="IPieceFactory"/>.
-///
-/// Design Pattern: Decorator
-/// ─────────────────────────────────────────────────────────────────────────
-/// A Decorator wraps an existing object (the "component") and implements the
-/// same interface so it can be used anywhere the original would be used.
-/// Concrete decorators then override only the methods they want to extend,
-/// delegating everything else to the wrapped inner factory.
-///
-/// This base class handles the delegation boilerplate so each concrete
-/// decorator only needs to override the methods it actually changes.
-/// </summary>
+// DECORATOR — Abstract Base Decorator
+// This is the "wrapper" layer. It holds a reference to any IPieceFactory
+// and just forwards every call to it by default.
+// Concrete decorators inherit from this and only override what they change.
+// Key idea: it implements IPieceFactory AND holds an IPieceFactory —
+// that's what makes stacking decorators possible.
 public abstract class PieceFactoryDecorator : IPieceFactory
 {
-    /// <summary>The wrapped factory that this decorator delegates to.</summary>
+    // the factory being wrapped (could be TetrisPieceFactory or another decorator)
     protected readonly IPieceFactory _inner;
 
     protected PieceFactoryDecorator(IPieceFactory inner)
@@ -25,9 +18,7 @@ public abstract class PieceFactoryDecorator : IPieceFactory
         _inner = inner ?? throw new ArgumentNullException(nameof(inner));
     }
 
-    /// <inheritdoc/>
-    public virtual TetrisPiece CreatePiece() => _inner.CreatePiece();
-
-    /// <inheritdoc/>
-    public virtual TetrisPiece CreatePiece(int type) => _inner.CreatePiece(type);
+    // default behavior: just pass through to whatever is wrapped
+    public virtual ITetrisPiece CreatePiece() => _inner.CreatePiece();
+    public virtual ITetrisPiece CreatePiece(int type) => _inner.CreatePiece(type);
 }

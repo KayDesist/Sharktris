@@ -2,14 +2,12 @@ using SharkTetris.Models;
 
 namespace SharkTetris.Services;
 
-/// <summary>
-/// Subject interface — manages observer registration and event dispatch.
-///
-/// Design Pattern: Observer (Subject role)
-/// </summary>
+// OBSERVER — Subject Interface
+// This is the "YouTube channel" side. It manages who is subscribed
+// and broadcasts events to all of them via Publish().
 public interface IGameEventService
 {
-    void Subscribe(IGameObserver observer);
-    void Unsubscribe(IGameObserver observer);
-    void Publish(GameEvent gameEvent);
+    void Subscribe(IGameObserver observer);   // add a listener
+    void Unsubscribe(IGameObserver observer); // remove a listener
+    void Publish(GameEvent gameEvent);         // notify ALL current listeners
 }

@@ -1,10 +1,655 @@
-﻿@page
+@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Design Pattern Demo";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<style>
+    /* ── Retro base ── */
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+        background: #000820;
+        color: #e0e0e0;
+        font-family: 'VT323', monospace;
+    }
+
+    /* ocean canvas sits behind everything */
+    #ocean {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+    }
+
+    /* everything above the canvas */
+    .page-wrap { position: relative; z-index: 1; }
+
+    /* ── Header ── */
+    .demo-header {
+        text-align: center;
+        padding: 2rem 0 1.2rem;
+    }
+    .demo-header h1 {
+        font-family: 'Press Start 2P', monospace;
+        font-size: 1.8rem;
+        color: #00f0f0;
+        text-shadow: 0 0 16px #00f0f0, 0 0 32px #007888;
+        letter-spacing: 2px;
+        margin-bottom: 0.5rem;
+    }
+    .demo-header p {
+        font-size: 1.2rem;
+        color: #5599aa;
+        letter-spacing: 1px;
+    }
+
+    /* ── Cards grid ── */
+    .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+        gap: 1.5rem;
+        padding-bottom: 3rem;
+    }
+
+    .card {
+        background: rgba(0, 8, 30, 0.82);
+        border: 2px solid #00f0f0;
+        border-radius: 0;
+        padding: 1.4rem;
+        box-shadow: 0 0 12px rgba(0,240,240,0.15), inset 0 0 20px rgba(0,0,0,0.4);
+        image-rendering: pixelated;
+    }
+
+    /* pixelated corner accent */
+    .card::before {
+        content: '';
+        display: block;
+        width: 8px; height: 8px;
+        background: #00f0f0;
+        position: absolute;
+        top: -2px; left: -2px;
+    }
+    .card { position: relative; }
+
+    .card h2 {
+        font-family: 'Press Start 2P', monospace;
+        font-size: 0.75rem;
+        font-weight: 400;
+        margin: 0.7rem 0 0.6rem;
+        color: #fff;
+        letter-spacing: 1px;
+    }
+    .card p {
+        font-size: 1rem;
+        color: #88aabb;
+        line-height: 1.5;
+        margin-bottom: 1rem;
+    }
+
+    /* ── Badges ── */
+    .badge {
+        display: inline-block;
+        font-family: 'Press Start 2P', monospace;
+        font-size: 0.5rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 3px 8px;
+        border-radius: 0;
+    }
+    .creational { background: #003040; color: #00f0f0; border: 1px solid #00f0f0; }
+    .behavioral { background: #302000; color: #f0d000; border: 1px solid #f0d000; }
+    .structural { background: #301000; color: #f07800; border: 1px solid #f07800; }
+
+    /* ── Buttons ── */
+    .btn-demo {
+        display: inline-block;
+        padding: 6px 12px;
+        border: 2px solid currentColor;
+        border-radius: 0;
+        font-family: 'Press Start 2P', monospace;
+        font-size: 0.5rem;
+        font-weight: 400;
+        cursor: pointer;
+        margin: 3px 3px 3px 0;
+        background: transparent;
+        letter-spacing: 0.05em;
+        transition: background 0.1s, color 0.1s;
+    }
+    .btn-cyan   { color: #00f0f0; }
+    .btn-cyan:hover   { background: #00f0f0; color: #000; }
+    .btn-yellow { color: #f0d000; }
+    .btn-yellow:hover { background: #f0d000; color: #000; }
+    .btn-orange { color: #f07800; }
+    .btn-orange:hover { background: #f07800; color: #000; }
+    .btn-red    { color: #f03030; }
+    .btn-red:hover    { background: #f03030; color: #fff; }
+
+    /* ── Output box ── */
+    .output-box {
+        margin-top: 1rem;
+        padding: 0.8rem;
+        background: rgba(0,0,0,0.6);
+        border: 1px solid #1a3a4a;
+        font-size: 1rem;
+        min-height: 60px;
+        color: #ccc;
+    }
+    .output-box.hidden { display: none; }
+
+    .piece-label {
+        font-family: 'Press Start 2P', monospace;
+        font-size: 0.55rem;
+        margin-bottom: 8px;
+        color: #e0e0e0;
+        letter-spacing: 1px;
+    }
+
+    /* Tetris piece cells — pixelated look with inner highlight */
+    .piece-grid { display: inline-grid; gap: 2px; margin-top: 6px; }
+    .piece-cell {
+        width: 22px; height: 22px;
+        border-radius: 0;
+        background: #111;
+        position: relative;
+    }
+    .piece-cell.filled::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-top: 3px solid rgba(255,255,255,0.35);
+        border-left: 3px solid rgba(255,255,255,0.25);
+        border-bottom: 3px solid rgba(0,0,0,0.4);
+        border-right: 3px solid rgba(0,0,0,0.3);
+    }
+
+    /* ── Score stats ── */
+    .stat-row { display: flex; gap: 1.5rem; margin-top: 0.5rem; }
+    .stat { text-align: center; }
+    .stat-val {
+        font-family: 'Press Start 2P', monospace;
+        font-size: 1.1rem;
+        color: #f0d000;
+        text-shadow: 0 0 8px #f0d000;
+    }
+    .stat-lbl {
+        font-family: 'Press Start 2P', monospace;
+        font-size: 0.45rem;
+        color: #556;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-top: 2px;
+    }
+
+    .log-line { color: #556677; font-size: 0.9rem; margin-top: 4px; }
+    .log-line span { color: #99bbcc; }
+
+    /* scanline overlay for CRT feel */
+    body::after {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            rgba(0,0,0,0.06) 2px,
+            rgba(0,0,0,0.06) 4px
+        );
+        pointer-events: none;
+        z-index: 9999;
+    }
+</style>
+
+<canvas id="ocean"></canvas>
+
+<div class="page-wrap">
+    <div class="demo-header">
+        <h1>SHARK TETRIS</h1>
+        <p>Design Pattern Demo &mdash; CSC 360</p>
+    </div>
+
+    <div class="cards">
+
+        <!-- Factory Method -->
+        <div class="card">
+            <span class="badge creational">Creational</span>
+            <h2>Factory Method</h2>
+            <p>
+                The server creates pieces through <code>IPieceFactory</code>. The caller just asks
+                for a piece &mdash; it doesn&rsquo;t know or care which type gets built.
+            </p>
+            <button class="btn-demo btn-cyan" onclick="createPiece()">Create Piece</button>
+            <div id="factory-out" class="output-box hidden"></div>
+        </div>
+
+        <!-- Observer -->
+        <div class="card">
+            <span class="badge behavioral">Behavioral</span>
+            <h2>Observer</h2>
+            <p>
+                Game events are published to <code>GameEventService</code>, which notifies
+                every registered observer. Score and log update independently &mdash; no direct links between them.
+            </p>
+            <button class="btn-demo btn-yellow" onclick="sendEvent('RowsCleared', 1)">+1 Row</button>
+            <button class="btn-demo btn-yellow" onclick="sendEvent('RowsCleared', 2)">+2 Rows</button>
+            <button class="btn-demo btn-yellow" onclick="sendEvent('RowsCleared', 4)">+4 (Tetris!)</button>
+            <button class="btn-demo btn-red"    onclick="sendEvent('GameOver', 0)">Game Over</button>
+            <div id="observer-out" class="output-box">
+                <div class="stat-row">
+                    <div class="stat"><div class="stat-val" id="score">0</div><div class="stat-lbl">Score</div></div>
+                    <div class="stat"><div class="stat-val" id="lines">0</div><div class="stat-lbl">Lines</div></div>
+                    <div class="stat"><div class="stat-val" id="level">1</div><div class="stat-lbl">Level</div></div>
+                </div>
+                <div id="event-log"></div>
+            </div>
+        </div>
+
+        <!-- Decorator -->
+        <div class="card">
+            <span class="badge structural">Structural</span>
+            <h2>Decorator</h2>
+            <p>
+                <code>NextPiecePreviewFactory</code> wraps the base factory and adds a look-ahead
+                queue. Reading <em>Next Piece</em> doesn&rsquo;t consume it &mdash; the base factory is unchanged.
+            </p>
+            <button class="btn-demo btn-orange" onclick="getNextPiece()">Check Next Piece</button>
+            <button class="btn-demo btn-orange" onclick="createPieceDecorator()">Consume &amp; Advance</button>
+            <div id="decorator-out" class="output-box hidden"></div>
+        </div>
+
+    </div>
 </div>
+
+@section Scripts {
+<script>
+// ── Tetris piece rendering ──────────────────────────────────────────
+const PIECE_NAMES  = ['', 'I', 'O', 'T', 'S', 'Z', 'J', 'L'];
+const PIECE_COLORS = ['', '#00f0f0', '#f0f000', '#a000f0', '#00f000', '#f00000', '#0000f0', '#f0a000'];
+
+function renderPiece(piece) {
+    const grid = document.createElement('div');
+    grid.className = 'piece-grid';
+    grid.style.gridTemplateColumns = `repeat(${piece.shape[0].length}, 24px)`;
+    piece.shape.forEach(row => {
+        row.forEach(cell => {
+            const d = document.createElement('div');
+            d.className = 'piece-cell' + (cell ? ' filled' : '');
+            if (cell) d.style.background = PIECE_COLORS[piece.type];
+            grid.appendChild(d);
+        });
+    });
+    return grid;
+}
+
+async function createPiece() {
+    const res = await fetch('/api/piece');
+    const piece = await res.json();
+    const box = document.getElementById('factory-out');
+    box.classList.remove('hidden');
+    box.innerHTML = `<div class="piece-label">PIECE ${piece.type} &mdash; ${PIECE_NAMES[piece.type]}</div>`;
+    box.appendChild(renderPiece(piece));
+    box.innerHTML += `<div class="log-line">startX: <span>${piece.startX}</span></div>`;
+}
+
+async function sendEvent(type, value) {
+    await fetch('/api/game/event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, value })
+    });
+    const res = await fetch('/api/game/score');
+    const data = await res.json();
+    document.getElementById('score').textContent = data.score;
+    document.getElementById('lines').textContent = data.linesCleared;
+    document.getElementById('level').textContent = data.level;
+    const log = document.getElementById('event-log');
+    const msg = type === 'GameOver'
+        ? `<span style="color:#f03030">GAME OVER &mdash; score reset</span>`
+        : `<span>+${value} row${value > 1 ? 's' : ''} cleared</span>`;
+    log.innerHTML = `<div class="log-line">&rsaquo; ${msg}</div>` + log.innerHTML;
+    if (log.children.length > 4) log.removeChild(log.lastChild);
+}
+
+async function getNextPiece() {
+    const res = await fetch('/api/piece/next');
+    const piece = await res.json();
+    const box = document.getElementById('decorator-out');
+    box.classList.remove('hidden');
+    box.innerHTML = `<div class="piece-label">NEXT UP: PIECE ${piece.type} &mdash; ${PIECE_NAMES[piece.type]}</div>`;
+    box.appendChild(renderPiece(piece));
+    box.innerHTML += `<div class="log-line">(not consumed &mdash; call again to confirm it&rsquo;s the same)</div>`;
+}
+
+async function createPieceDecorator() {
+    const res = await fetch('/api/piece');
+    const piece = await res.json();
+    const box = document.getElementById('decorator-out');
+    box.classList.remove('hidden');
+    box.innerHTML = `<div class="piece-label">CONSUMED: PIECE ${piece.type} &mdash; ${PIECE_NAMES[piece.type]}</div>`;
+    box.appendChild(renderPiece(piece));
+    box.innerHTML += `<div class="log-line">(queue advanced &mdash; hit Check Next to see what&rsquo;s coming)</div>`;
+}
+
+// ── Ocean background animation ─────────────────────────────────────
+(function() {
+    const canvas = document.getElementById('ocean');
+    const ctx = canvas.getContext('2d');
+
+    function resize() {
+        canvas.width  = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // ── Shark species definitions ──────────────────────────────────
+    const SPECIES = {
+        lemon:      { bodyColor: '#c8b040', bellyColor: '#e8d888', finColor: '#a89030', size: 70,  speed: 1.1, label: 'Lemon'      },
+        tiger:      { bodyColor: '#607070', bellyColor: '#c0c8b8', finColor: '#405060', size: 90,  speed: 1.3, label: 'Tiger'      },
+        nurse:      { bodyColor: '#7a5a38', bellyColor: '#c8a870', finColor: '#5a4020', size: 65,  speed: 0.7, label: 'Nurse'      },
+        hammerhead: { bodyColor: '#506878', bellyColor: '#b0c0c0', finColor: '#384858', size: 80,  speed: 1.4, label: 'Hammerhead' },
+        whale:      { bodyColor: '#2a4a6a', bellyColor: '#88a8b8', finColor: '#1a3050', size: 130, speed: 0.5, label: 'Whale'      },
+        bull:       { bodyColor: '#708090', bellyColor: '#b8c8c8', finColor: '#506070', size: 75,  speed: 1.5, label: 'Bull'       },
+    };
+
+    const speciesKeys = Object.keys(SPECIES);
+
+    // ── Create sharks ──────────────────────────────────────────────
+    const sharks = speciesKeys.flatMap(key => {
+        const count = key === 'whale' ? 1 : 2;
+        return Array.from({ length: count }, () => {
+            const sp = SPECIES[key];
+            const angle = Math.random() * Math.PI * 2;
+            return {
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight,
+                vx: Math.cos(angle) * sp.speed,
+                vy: Math.sin(angle) * sp.speed,
+                angle,
+                species: key,
+                size: sp.size * (0.85 + Math.random() * 0.3),
+                turnRate: 0.025 + Math.random() * 0.015,
+                stripePhase: Math.random() * Math.PI * 2,
+            };
+        });
+    });
+
+    // ── Create fish ────────────────────────────────────────────────
+    const FISH_COUNT = 28;
+    const fish = Array.from({ length: FISH_COUNT }, () => {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1.2 + Math.random() * 0.8;
+        return {
+            x: Math.random() * window.innerWidth,
+            y: Math.random() * window.innerHeight,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            angle,
+            size: 6 + Math.random() * 5,
+            color: ['#88ddff','#ffdd88','#ff88aa','#88ffcc'][Math.floor(Math.random()*4)],
+            speed,
+            scared: false,
+        };
+    });
+
+    // ── Steering helpers ───────────────────────────────────────────
+    function steerToward(entity, tx, ty, turnRate) {
+        const desired = Math.atan2(ty - entity.y, tx - entity.x);
+        let diff = desired - entity.angle;
+        while (diff >  Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        entity.angle += Math.sign(diff) * Math.min(Math.abs(diff), turnRate);
+    }
+    function steerAway(entity, ox, oy, turnRate) {
+        steerToward(entity, entity.x * 2 - ox, entity.y * 2 - oy, turnRate);
+    }
+    function wrap(e) {
+        const W = canvas.width, H = canvas.height;
+        if (e.x < -150) e.x = W + 100;
+        if (e.x > W + 150) e.x = -100;
+        if (e.y < -150) e.y = H + 100;
+        if (e.y > H + 150) e.y = -100;
+    }
+
+    // ── Draw functions ─────────────────────────────────────────────
+    function drawShark(s) {
+        const sp = SPECIES[s.species];
+        const L  = s.size;
+        const W  = L * 0.22;
+
+        ctx.save();
+        ctx.translate(s.x, s.y);
+        ctx.rotate(s.angle);
+
+        // glow
+        ctx.shadowColor = sp.bodyColor;
+        ctx.shadowBlur  = 8;
+
+        if (s.species === 'hammerhead') {
+            // wide T-shaped head
+            ctx.beginPath();
+            ctx.ellipse(L * 0.28, 0, L * 0.22, W * 1.1, 0, 0, Math.PI * 2);
+            ctx.fillStyle = sp.bodyColor;
+            ctx.fill();
+            // hammer crossbar
+            ctx.beginPath();
+            ctx.roundRect(-L * 0.02, -W * 1.6, L * 0.38, W * 0.55, 4);
+            ctx.fillStyle = sp.bodyColor;
+            ctx.fill();
+            // eyes on ends of hammer
+            ctx.fillStyle = '#000';
+            ctx.beginPath(); ctx.arc(L * 0.36, -W * 1.32, 3, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(-L * 0.02, -W * 1.32, 3, 0, Math.PI*2); ctx.fill();
+        } else {
+            // main body — torpedo shape
+            ctx.beginPath();
+            ctx.ellipse(0, 0, L * 0.46, W, 0, 0, Math.PI * 2);
+            ctx.fillStyle = sp.bodyColor;
+            ctx.fill();
+
+            // belly lighter patch
+            ctx.beginPath();
+            ctx.ellipse(L * 0.05, W * 0.25, L * 0.32, W * 0.55, 0, 0, Math.PI * 2);
+            ctx.fillStyle = sp.bellyColor;
+            ctx.fill();
+
+            // eye
+            ctx.fillStyle = '#000';
+            ctx.beginPath(); ctx.arc(L * 0.3, -W * 0.3, 3.5, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.arc(L * 0.31, -W * 0.32, 1.2, 0, Math.PI*2); ctx.fill();
+
+            // mouth
+            ctx.beginPath();
+            ctx.arc(L * 0.43, W * 0.1, W * 0.45, 0.15, Math.PI - 0.15);
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // whale shark spots
+            if (s.species === 'whale') {
+                ctx.fillStyle = 'rgba(255,255,255,0.12)';
+                for (let i = 0; i < 12; i++) {
+                    const sx = (Math.sin(i * 1.7 + s.stripePhase) * 0.35) * L;
+                    const sy = (Math.cos(i * 2.3 + s.stripePhase) * 0.6) * W;
+                    ctx.beginPath(); ctx.arc(sx, sy, 4 + (i % 3) * 2, 0, Math.PI*2); ctx.fill();
+                }
+            }
+
+            // tiger stripes
+            if (s.species === 'tiger') {
+                ctx.strokeStyle = 'rgba(40,55,50,0.45)';
+                ctx.lineWidth = 5;
+                for (let i = 0; i < 5; i++) {
+                    const bx = (i - 2) * L * 0.15;
+                    ctx.beginPath();
+                    ctx.moveTo(bx, -W * 0.9);
+                    ctx.quadraticCurveTo(bx + L*0.04, 0, bx, W * 0.85);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // dorsal fin
+        ctx.beginPath();
+        ctx.moveTo(L * 0.08, -W * 0.95);
+        ctx.lineTo(-L * 0.05, -W * 2.0);
+        ctx.lineTo(-L * 0.18, -W * 0.95);
+        ctx.closePath();
+        ctx.fillStyle = sp.finColor;
+        ctx.fill();
+
+        // pectoral fin (side)
+        ctx.beginPath();
+        ctx.moveTo(L * 0.05, W * 0.5);
+        ctx.lineTo(-L * 0.1,  W * 1.55);
+        ctx.lineTo(-L * 0.22, W * 0.6);
+        ctx.closePath();
+        ctx.fillStyle = sp.finColor;
+        ctx.fill();
+
+        // tail fin
+        ctx.beginPath();
+        ctx.moveTo(-L * 0.42, 0);
+        ctx.lineTo(-L * 0.65, -W * 1.3);
+        ctx.lineTo(-L * 0.52, 0);
+        ctx.lineTo(-L * 0.65,  W * 1.0);
+        ctx.closePath();
+        ctx.fillStyle = sp.finColor;
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+        ctx.restore();
+    }
+
+    function drawFish(f) {
+        ctx.save();
+        ctx.translate(f.x, f.y);
+        ctx.rotate(f.angle);
+        ctx.shadowColor = f.color;
+        ctx.shadowBlur  = f.scared ? 8 : 3;
+
+        // body
+        ctx.beginPath();
+        ctx.ellipse(0, 0, f.size, f.size * 0.45, 0, 0, Math.PI * 2);
+        ctx.fillStyle = f.color;
+        ctx.fill();
+
+        // tail
+        ctx.beginPath();
+        ctx.moveTo(-f.size * 0.85, 0);
+        ctx.lineTo(-f.size * 1.5, -f.size * 0.6);
+        ctx.lineTo(-f.size * 1.5,  f.size * 0.6);
+        ctx.closePath();
+        ctx.fillStyle = f.color;
+        ctx.fill();
+
+        // eye
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.arc(f.size * 0.55, -f.size * 0.1, 1.8, 0, Math.PI*2); ctx.fill();
+
+        ctx.shadowBlur = 0;
+        ctx.restore();
+    }
+
+    // ── Update loop ────────────────────────────────────────────────
+    function update() {
+        // sharks chase nearest fish
+        sharks.forEach(s => {
+            const sp = SPECIES[s.species];
+            let nearestDist = Infinity, nearestFish = null;
+            fish.forEach(f => {
+                const d = Math.hypot(f.x - s.x, f.y - s.y);
+                if (d < nearestDist) { nearestDist = d; nearestFish = f; }
+            });
+            if (nearestFish && nearestDist < 400) {
+                steerToward(s, nearestFish.x, nearestFish.y, s.turnRate);
+            }
+            s.vx = Math.cos(s.angle) * sp.speed;
+            s.vy = Math.sin(s.angle) * sp.speed;
+            s.x += s.vx;
+            s.y += s.vy;
+            wrap(s);
+        });
+
+        // fish flee nearest shark
+        fish.forEach(f => {
+            let nearestDist = Infinity, nearestShark = null;
+            sharks.forEach(s => {
+                const d = Math.hypot(s.x - f.x, s.y - f.y);
+                if (d < nearestDist) { nearestDist = d; nearestShark = s; }
+            });
+
+            f.scared = nearestDist < 200;
+            const speed = f.scared ? f.speed * 2.2 : f.speed;
+
+            if (nearestShark && nearestDist < 220) {
+                steerAway(f, nearestShark.x, nearestShark.y, 0.12);
+            } else {
+                // mild wander
+                f.angle += (Math.random() - 0.5) * 0.08;
+            }
+            f.vx = Math.cos(f.angle) * speed;
+            f.vy = Math.sin(f.angle) * speed;
+            f.x += f.vx;
+            f.y += f.vy;
+            wrap(f);
+        });
+    }
+
+    // ── Render ─────────────────────────────────────────────────────
+    function drawOcean() {
+        const W = canvas.width, H = canvas.height;
+
+        // deep ocean gradient
+        const grad = ctx.createLinearGradient(0, 0, 0, H);
+        grad.addColorStop(0,   '#000820');
+        grad.addColorStop(0.5, '#001030');
+        grad.addColorStop(1,   '#000a20');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+
+        // subtle light rays from top
+        ctx.save();
+        ctx.globalAlpha = 0.025;
+        for (let i = 0; i < 6; i++) {
+            const x = W * (i / 5);
+            const rayGrad = ctx.createLinearGradient(x, 0, x + W * 0.08, H);
+            rayGrad.addColorStop(0, '#4488ff');
+            rayGrad.addColorStop(1, 'transparent');
+            ctx.fillStyle = rayGrad;
+            ctx.beginPath();
+            ctx.moveTo(x - W*0.02, 0);
+            ctx.lineTo(x + W*0.10, 0);
+            ctx.lineTo(x + W*0.20, H);
+            ctx.lineTo(x + W*0.08, H);
+            ctx.closePath();
+            ctx.fill();
+        }
+        ctx.restore();
+
+        // caustic shimmer dots
+        ctx.save();
+        ctx.globalAlpha = 0.04;
+        ctx.fillStyle = '#88ccff';
+        for (let i = 0; i < 60; i++) {
+            const cx = (Math.sin(i * 37.1 + Date.now() * 0.0003) * 0.5 + 0.5) * W;
+            const cy = (Math.cos(i * 19.7 + Date.now() * 0.0002) * 0.5 + 0.5) * H;
+            ctx.beginPath(); ctx.arc(cx, cy, 2, 0, Math.PI*2); ctx.fill();
+        }
+        ctx.restore();
+    }
+
+    let rafId;
+    function frame() {
+        update();
+        drawOcean();
+        fish.forEach(drawFish);
+        sharks.forEach(drawShark);
+        rafId = requestAnimationFrame(frame);
+    }
+    frame();
+})();
+</script>
+}

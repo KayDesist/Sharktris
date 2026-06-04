@@ -1,18 +1,13 @@
-﻿using SharkTetris.Models;
+using SharkTetris.Models;
 
 namespace SharkTetris.Services;
 
-/// <summary>
-/// Factory interface for creating Tetris pieces.
-/// Abstracting behind an interface keeps callers decoupled from the
-/// concrete implementation and makes alternative factories easy to swap in
-/// (e.g. a seeded/deterministic factory for replays or testing).
-/// </summary>
+// FACTORY METHOD — Creator Interface
+// This is the factory contract. Anyone who wants to make pieces
+// must implement these two methods.
+// The game only ever talks to this interface — never to TetrisPieceFactory directly.
 public interface IPieceFactory
 {
-    /// <summary>Creates a randomly selected Tetris piece.</summary>
-    TetrisPiece CreatePiece();
-
-    /// <summary>Creates a specific Tetris piece by type (1–7).</summary>
-    TetrisPiece CreatePiece(int type);
+    ITetrisPiece CreatePiece();        // make a random piece
+    ITetrisPiece CreatePiece(int type); // make a specific piece by type number
 }

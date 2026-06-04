@@ -7,27 +7,27 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/SharkTetris.styles.css" asp-append-version="true" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap" rel="stylesheet">
 </head>
 <body>
+    <style>
+        body { background: #000820; }
+        header { border-bottom: 3px solid #00f0f0; background: rgba(0,4,20,0.92); }
+        .retro-nav { display:flex; align-items:center; gap:2rem; padding:0.6rem 1.5rem; }
+        .retro-brand { font-family:'Press Start 2P',monospace; font-size:1rem; color:#00f0f0; text-decoration:none; text-shadow:0 0 10px #00f0f0; }
+        .retro-brand:hover { color:#fff; }
+        .retro-links { display:flex; gap:1.5rem; list-style:none; margin:0; padding:0; }
+        .retro-links a { font-family:'Press Start 2P',monospace; font-size:0.55rem; color:#888; text-decoration:none; letter-spacing:0.05em; }
+        .retro-links a:hover { color:#00f0f0; }
+    </style>
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container">
-                <a class="navbar-brand" asp-area="" asp-page="/Index">SharkTetris</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Privacy">Privacy</a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
+        <nav class="retro-nav">
+            <a class="retro-brand" asp-area="" asp-page="/Index">🦈 SHARKTRIS</a>
+            <ul class="retro-links">
+                <li><a asp-area="" asp-page="/Index">HOME</a></li>
+                <li><a asp-area="" asp-page="/Privacy">PRIVACY</a></li>
+            </ul>
         </nav>
     </header>
     <div class="container">

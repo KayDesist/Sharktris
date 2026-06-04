@@ -2,11 +2,10 @@ using SharkTetris.Models;
 
 namespace SharkTetris.Services;
 
-/// <summary>
-/// Concrete Observer — writes a log entry for every game event received.
-///
-/// Design Pattern: Observer (Concrete Observer role)
-/// </summary>
+// OBSERVER — Concrete Observer #2
+// Also subscribes to game events, but its only job is logging.
+// Adding this observer required zero changes to ScoreObserver or the game —
+// that's the whole point of the Observer pattern.
 public class GameLogObserver : IGameObserver
 {
     private readonly ILogger<GameLogObserver> _logger;
@@ -16,6 +15,7 @@ public class GameLogObserver : IGameObserver
         _logger = logger;
     }
 
+    // called by GameEventService.Publish() — same entry point as ScoreObserver
     public void OnGameEvent(GameEvent gameEvent)
     {
         _logger.LogInformation("Game event: {EventType} value={Value}", gameEvent.Type, gameEvent.Value);

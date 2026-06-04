@@ -2,67 +2,34 @@ using SharkTetris.Models;
 
 namespace SharkTetris.Services;
 
-/// <summary>
-/// Concrete Decorator that adds a "next piece" preview to any
-/// <see cref="IPieceFactory"/> without modifying the wrapped factory.
-///
-/// Design Pattern: Decorator
-/// ─────────────────────────────────────────────────────────────────────────
-/// Before this refactor, the client had no way to know which piece was coming
-/// next — it could only request the current piece on demand. A "next piece"
-/// preview is a standard Tetris feature that helps players plan ahead.
-///
-/// Rather than modifying <see cref="TetrisPieceFactory"/> (breaking the
-/// Open/Closed Principle), we wrap it in this decorator. The decorator:
-///   1. Pre-generates one piece at construction time and stores it as
-///      <see cref="NextPiece"/> (the upcoming piece the client can preview).
-///   2. On every <see cref="CreatePiece()"/> call it returns the stored
-///      preview piece as the "current" piece, then immediately generates a
-///      fresh piece to become the new preview — maintaining a one-piece
-///      look-ahead at all times.
-///   3. Delegates <see cref="CreatePiece(int)"/> (used for seeded/test
-///      requests) straight through to the inner factory unchanged.
-///
-/// The result: callers still use only <see cref="IPieceFactory"/> — they are
-/// completely unaware that a decorator is in the chain — while a dedicated
-/// endpoint can expose <see cref="NextPiece"/> for the preview UI.
-/// </summary>
+// DECORATOR — Concrete Decorator
+// Wraps TetrisPieceFactory and adds a one-piece look-ahead.
+// TetrisPieceFactory was NOT modified at all — new behavior was layered on top.
+// This is the "add a lid to the coffee cup" moment.
 public class NextPiecePreviewFactory : PieceFactoryDecorator
 {
     private readonly object _lock = new();
 
-    /// <summary>
-    /// The piece that will be returned by the next <see cref="CreatePiece()"/>
-    /// call. Clients can read this via <c>GET /api/piece/next</c> to render a
-    /// preview without consuming the piece from the queue.
-    /// </summary>
-    public TetrisPiece NextPiece { get; private set; }
+    // the UI reads this to show the preview panel
+    public ITetrisPiece NextPiece { get; private set; }
 
-    /// <summary>
-    /// Wraps <paramref name="inner"/> and pre-generates the first preview piece.
-    /// </summary>
     public NextPiecePreviewFactory(IPieceFactory inner) : base(inner)
     {
-        // Seed the look-ahead queue with one piece so NextPiece is never null.
+        // pre-generate the first "next" piece so the preview is ready immediately
         NextPiece = _inner.CreatePiece();
     }
 
-    /// <summary>
-    /// Returns the pre-generated preview piece as the "current" piece and
-    /// immediately queues a fresh piece as the new preview.
-    /// </summary>
-    public override TetrisPiece CreatePiece()
+    // this is the added behavior — the original factory has nothing like this
+    public override ITetrisPiece CreatePiece()
     {
         lock (_lock)
         {
-            TetrisPiece current = NextPiece;
-            NextPiece = _inner.CreatePiece(); // advance the look-ahead
-            return current;
+            ITetrisPiece current = NextPiece;       // the queued piece becomes the current piece
+            NextPiece = _inner.CreatePiece();        // pre-generate the next preview piece
+            return current;                          // return what was queued
         }
     }
 
-    // CreatePiece(int type) is intentionally not overridden — the base
-    // decorator delegates it straight to the inner factory, bypassing the
-    // preview queue (correct: type-specific requests are used for testing
-    // and replays, not normal gameplay flow).
+    // type-specific requests skip the queue and go straight to the inner factory
+    // (CreatePiece(int type) inherits the pass-through from PieceFactoryDecorator)
 }

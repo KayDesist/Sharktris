@@ -2,36 +2,23 @@ using SharkTetris.Models;
 
 namespace SharkTetris.Services;
 
-/// <summary>
-/// Concrete Subject in the Observer pattern.
-///
-/// Design Pattern: Observer
-/// ─────────────────────────────────────────────────────────────────────────
-/// GameEventService is the central event hub. Any game component that cares
-/// about game events (scoring, logging, future sound or animation systems)
-/// registers itself as an <see cref="IGameObserver"/>. When the client reports
-/// an event — rows cleared, game over, etc. — this class forwards it to every
-/// registered observer without knowing or caring what each one does.
-///
-/// This decoupling means:
-///   • New observers can be added without changing this class or any other
-///     existing observer.
-///   • Event producers (API endpoints) only depend on IGameEventService,
-///     not on any specific downstream consumer.
-///   • Each observer owns its own state and logic, keeping classes small and
-///     single-purpose.
-/// </summary>
+// OBSERVER — Concrete Subject
+// Holds the list of observers and notifies all of them when an event fires.
+// The game code that calls Publish() has no idea who's listening —
+// it just sends the event and walks away.
 public class GameEventService : IGameEventService
 {
+    // the subscriber list — ScoreObserver and GameLogObserver both live here
     private readonly List<IGameObserver> _observers = [];
 
     public void Subscribe(IGameObserver observer) => _observers.Add(observer);
 
     public void Unsubscribe(IGameObserver observer) => _observers.Remove(observer);
 
+    // loops through every subscriber and tells them about the event
     public void Publish(GameEvent gameEvent)
     {
         foreach (var observer in _observers)
-            observer.OnGameEvent(gameEvent);
+            observer.OnGameEvent(gameEvent); // each observer handles it in its own way
     }
 }
